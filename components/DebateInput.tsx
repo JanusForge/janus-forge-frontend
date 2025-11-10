@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { AIPlatform } from '@/types';
 
 interface DebateInputProps {
-  onDebate: (query: string) => void;
+  onSubmit: (query: string) => void;
   isLoading: boolean;
-  selectedPlatforms: AIPlatform[];
 }
 
 const SUGGESTED_TOPICS = [
@@ -17,22 +15,22 @@ const SUGGESTED_TOPICS = [
   "Should college education be free for everyone?",
 ];
 
-export default function DebateInput({ onDebate, isLoading, selectedPlatforms }: DebateInputProps) {
+export default function DebateInput({ onSubmit, isLoading }: DebateInputProps) {
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim() && !isLoading && selectedPlatforms.length > 0) {
-      onDebate(query.trim());
+    if (query.trim() && !isLoading) {
+      onSubmit(query.trim());
     }
   };
 
   return (
-    <div>
+    <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
-            Enter a debate topic for {selectedPlatforms.length} AI platform(s):
+            Enter a debate topic for AI discussion:
           </label>
           <textarea
             id="query"
@@ -65,16 +63,16 @@ export default function DebateInput({ onDebate, isLoading, selectedPlatforms }: 
 
         <button
           type="submit"
-          disabled={!query.trim() || isLoading || selectedPlatforms.length === 0}
+          disabled={!query.trim() || isLoading}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Debating with {selectedPlatforms.length} AI platform(s)...
+              AI Models Debating...
             </>
           ) : (
-            `Start Debate with ${selectedPlatforms.length} AI Platform(s)`
+            'Start AI Debate'
           )}
         </button>
       </form>
