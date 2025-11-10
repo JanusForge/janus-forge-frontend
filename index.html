@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Janus Forge - Multi-AI Dialectic Platform</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        const AI_MODELS = {
+            gemini: { 
+                name: "Gemini Pro", 
+                provider: "Google",
+                color: "#4285F4",
+                enabled: true
+            },
+            chatgpt: { 
+                name: "GPT-4o Mini", 
+                provider: "OpenAI",
+                color: "#10A37F", 
+                enabled: true
+            },
+            claude: { 
+                name: "Claude 3 Haiku", 
+                provider: "Anthropic",
+                color: "#FF6B35",
+                enabled: true
+            }
+        };
+
+        function JanusForgeApp() {
+            const [messages, setMessages] = useState([]);
+            const [inputText, setInputText] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [selectedModels, setSelectedModels] = useState(['gemini', 'chatgpt', 'claude']);
+            const [isDialecticMode, setIsDialecticMode] = useState(true);
+            const [backendStatus, setBackendStatus] = useState('checking');
+            const [activeModels, setActiveModels] = useState({});
+            
+            const messagesEndRef = useRef(null);
+
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            };
+
+            useEffect(() => {
+                scrollToBottom();
+            }, [messages]);
+
+            useEffect(() => {
+                checkBackendHealth();
+            }, []);
+
+            const checkBackendHealth = async () => {
+                try {
+                    const response = await fetch('http://127.0.0.1:8001/health');
+                    const health = await response.json();
+                    
+                    setBackendStatus(health.status);
+                    setActiveModels(health.active_models);
+                    
+                    Object.keys(AI_MODELS).forEach(modelId => {
+                        AI_MODELS[modelId].enabled = health.active_models[modelId] === true;
+                    });
+                    
+                } catch (error) {
+                    console.error('Backend health check failed:', error);
+                    setBackendStatus('offline');
+                }
+            };
+
+            const handleSendMessage = async (targetModelId = null) => {
+                if (!inputText.trim() || isLoading) return;
+
+                const userMessage = {
+                    id: 'msg_' + Date.now(),
+                    type: 'user',
+                    content: inputText,
+                    timestamp: new Date()
+                };
+
+                setMessages(prev => [...prev, userMessage]);
+                const currentInput = inputText;
+                setInputText('');
+                setIsLoading(true);
+
+                try {
+                    const modelsToQuery = targetModelId 
+                        ? [targetModelId] 
+                        : (isDialecticMode ? selectedModels : [selectedModels[0]]);
+
+                    const enabledModelsToQuery = modelsToQuery.filter(modelId => 
+                        AI_MODELS[modelId]?.enabled !== false
+                    );
+
+                    if (enabledModelsToQuery.length === 0) {
+                        throw new Error('No enabled models available');
+                    }
+                    
+                    const response = await fetch('http://127.0.0.1:8001/api/v1/generate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            prompt: currentInput,
+                            selected_models: enabledModelsToQuery,
+                            session_id: 'session_' + Date.now()
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const aiResponses = await response.json();
+
+                    const aiMessages = aiResponses.map((res, index) => {
+                        const modelInfo = AI_MODELS[res.model] || { name: res.model, color: '#666' };
+                        
+                        if (res.error) {
+                            return {
+                                id: 'ai_err_' + Date.now() + '_' + index,
+                                type: 'ai',
+                                model: res.model,
+                                content: `Error from ${modelInfo.name}: ${res.error}`,
+                                timestamp: new Date(),
+                                isError: true
+                            };
+                        }
+                        
+                        return {
+                            id: 'ai_' + Date.now() + '_' + index,
+                            type: 'ai',
+                            model: res.model,
+                            content: res.content,
+                            timestamp: new Date(),
+                            processingTime: res.processing_time
+                        };
+                    });
+                    
+                    setMessages(prev => [...prev, ...aiMessages]);
+
+                } catch (error) {
+                    const errorMessage = {
+                        id: 'err_' + Date.now(),
+                        type: 'ai',
+                        model: 'system',
+                        content: `System Error: ${error.message}`,
+                        timestamp: new Date(),
+                        isError: true
+                    };
+                    setMessages(prev => [...prev, errorMessage]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                }
+            };
+
+            const toggleModelSelection = (modelId) => {
+                setSelectedModels(prev => 
+                    prev.includes(modelId) 
+                        ? prev.filter(id => id !== modelId)
+                        : [...prev, modelId]
+                );
+            };
+
+            const clearConversation = () => {
+                setMessages([]);
+            };
+
+            return (
+                React.createElement('div', { className: 'app' },
+                    // Header
+                    React.createElement('header', { className: 'app-header' },
+                        React.createElement('div', { className: 'header-content' },
+                            React.createElement('h1', null, '🔨 Janus Forge'),
+                            React.createElement('div', { className: 'backend-status' },
+                                React.createElement('span', { 
+                                    className: `status-indicator ${backendStatus}`
+                                }, `Backend: ${backendStatus}`),
+                                React.createElement('button', { 
+                                    onClick: checkBackendHealth,
+                                    className: 'refresh-btn'
+                                }, '↻')
+                            )
+                        )
+                    ),
+                    
+                    // Main content
+                    React.createElement('div', { className: 'app-body' },
+                        // Sidebar
+                        React.createElement('div', { className: 'sidebar' },
+                            React.createElement('div', { className: 'sidebar-section' },
+                                React.createElement('h3', null, 'AI Models'),
+                                Object.entries(AI_MODELS).map(([id, model]) =>
+                                    React.createElement('div', { key: id, className: 'model-checkbox' },
+                                        React.createElement('label', null,
+                                            React.createElement('input', {
+                                                type: 'checkbox',
+                                                checked: selectedModels.includes(id),
+                                                onChange: () => toggleModelSelection(id),
+                                                disabled: !model.enabled
+                                            }),
+                                            React.createElement('span', { 
+                                                className: `model-name ${!model.enabled ? 'disabled' : ''}`
+                                            }, model.name)
+                                        )
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: 'sidebar-section' },
+                                React.createElement('button', {
+                                    onClick: clearConversation,
+                                    className: 'clear-btn'
+                                }, 'Clear Conversation')
+                            )
+                        ),
+                        // Chat area
+                        React.createElement('div', { className: 'chat-container' },
+                            React.createElement('div', { className: 'messages-container' },
+                                messages.length === 0 ? 
+                                    React.createElement('div', { className: 'empty-state' },
+                                        React.createElement('h2', null, 'Welcome to Janus Forge'),
+                                        React.createElement('p', null, 'Select AI models and type a message to begin.')
+                                    )
+                                : messages.map((message) =>
+                                    React.createElement('div', { 
+                                        key: message.id, 
+                                        className: `message ${message.type} ${message.isError ? 'error' : ''}`
+                                    },
+                                        React.createElement('div', { className: 'message-header' },
+                                            message.type === 'user' ? 
+                                                React.createElement('span', { className: 'user-avatar' }, '👤')
+                                                : React.createElement('span', { 
+                                                    className: 'ai-avatar',
+                                                    style: { backgroundColor: AI_MODELS[message.model]?.color || '#666' }
+                                                }, AI_MODELS[message.model]?.name?.charAt(0) || 'AI'),
+                                            React.createElement('div', { className: 'message-info' },
+                                                React.createElement('span', { className: 'sender' },
+                                                    message.type === 'user' ? 'You' : AI_MODELS[message.model]?.name || message.model
+                                                ),
+                                                message.processingTime && React.createElement('span', { className: 'processing-time' },
+                                                    `${message.processingTime.toFixed(2)}s`
+                                                )
+                                            )
+                                        ),
+                                        React.createElement('div', { className: 'message-content' },
+                                            message.content
+                                        )
+                                    )
+                                ),
+                                isLoading && React.createElement('div', { className: 'message ai loading' },
+                                    React.createElement('div', { className: 'message-content' }, 'Generating responses...')
+                                ),
+                                React.createElement('div', { ref: messagesEndRef })
+                            ),
+                            React.createElement('div', { className: 'input-container' },
+                                React.createElement('div', { className: 'input-wrapper' },
+                                    React.createElement('textarea', {
+                                        value: inputText,
+                                        onChange: (e) => setInputText(e.target.value),
+                                        onKeyPress: handleKeyPress,
+                                        placeholder: 'Enter your prompt here...',
+                                        disabled: isLoading,
+                                        rows: 3
+                                    }),
+                                    React.createElement('button', {
+                                        onClick: () => handleSendMessage(),
+                                        disabled: !inputText.trim() || isLoading,
+                                        className: 'send-button'
+                                    }, isLoading ? '⏳' : '🚀')
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        ReactDOM.render(React.createElement(JanusForgeApp), document.getElementById('root'));
+    </script>
+</body>
+</html>
