@@ -13,21 +13,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call the FastAPI backend
-    const response = await fetch(`${API_BASE_URL}/v1/dialectic`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.status}`);
+    // Test endpoint without auth first
+    const testResponse = await fetch(`${API_BASE_URL}/v1/status`);
+    if (!testResponse.ok) {
+      return NextResponse.json(
+        { error: 'Backend not reachable' },
+        { status: 502 }
+      );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    // For now, return mock data until auth is implemented
+    const mockData = {
+      debate_topic: query,
+      responses: [
+        { model: "chatgpt", response: "Mock ChatGPT response for: " + query },
+        { model: "gemini", response: "Mock Gemini response for: " + query }
+      ],
+      note: "Authentication required for real AI responses"
+    };
+
+    return NextResponse.json(mockData);
 
   } catch (error) {
     console.error('API route error:', error);
