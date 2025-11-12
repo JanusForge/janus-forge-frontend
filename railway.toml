@@ -1,0 +1,13 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm install && npm run build"
+
+[deploy]
+startCommand = "npm start"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[[services]]
+name = "janus-forge-frontend"
+[http]
+internalPort = 3001
