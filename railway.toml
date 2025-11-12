@@ -10,4 +10,4 @@ restartPolicyMaxRetries = 10
 [[services]]
 name = "janus-forge-frontend"
 [http]
-internalPort = 3001
+internalPort = 8080
