@@ -24,9 +24,18 @@ const PAID_AI_PLATFORMS = [
 
 const ALL_AI_PLATFORMS = [...FREE_AI_PLATFORMS, ...PAID_AI_PLATFORMS];
 
+const SUGGESTED_TOPICS = [
+  "How can AI and humans collaborate to solve climate change?",
+  "What is the future of education with AI?",
+  "How can we ensure ethical AI development?",
+  "What role should governments play in regulating AI?",
+  "How will AI transform healthcare in the next decade?"
+];
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [topicInput, setTopicInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationStarted, setConversationStarted] = useState(false);
   const [selectedAIs, setSelectedAIs] = useState<string[]>(['chatgpt', 'claude', 'gemini']);
@@ -45,7 +54,6 @@ export default function ChatPage() {
 
   const toggleAI = (aiId: string, requiresPaid: boolean) => {
     if (requiresPaid) {
-      // Check if user has paid subscription
       const userTier = localStorage.getItem('userTier') || 'explorer';
       if (userTier === 'explorer') {
         setShowPaywall(aiId);
@@ -65,6 +73,7 @@ export default function ChatPage() {
     
     setIsLoading(true);
     setConversationStarted(true);
+    setTopicInput(''); // Clear the topic input
     
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -76,7 +85,6 @@ export default function ChatPage() {
     setMessages([userMessage]);
 
     try {
-      // Simulate AI responses
       setTimeout(() => {
         const aiResponses: Message[] = selectedAIs.map((aiId, index) => {
           const ai = ALL_AI_PLATFORMS.find(a => a.id === aiId);
@@ -153,6 +161,7 @@ export default function ChatPage() {
     setMessages([]);
     setConversationStarted(false);
     setInput('');
+    setTopicInput('');
   };
 
   const upgradeToPaid = () => {
@@ -253,12 +262,12 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Rest of the chat interface remains the same */}
+        {/* Conversation Area */}
         <div className="flex-1 p-6 space-y-6 pb-32">
           {!conversationStarted ? (
-            <div className="text-center py-12">
-              <div className="max-w-md mx-auto">
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <div className="text-center py-8">
+              <div className="max-w-2xl mx-auto">
+                <h2 className="text-3xl font-bold text-gray-900 mb-6">
                   Start a Group Conversation
                 </h2>
                 <p className="text-gray-600 mb-8">
@@ -271,21 +280,44 @@ export default function ChatPage() {
                   </div>
                 )}
                 
-                <div className="space-y-4">
-                  <button
-                    onClick={() => startConversation('How can AI and humans collaborate to solve climate change?')}
-                    disabled={selectedAIs.length === 0}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-3 px-6 rounded-lg transition-colors"
-                  >
-                    Start Climate Change Discussion
-                  </button>
-                  <button
-                    onClick={() => startConversation('What is the future of education with AI?')}
-                    disabled={selectedAIs.length === 0}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 px-6 rounded-lg transition-colors"
-                  >
-                    Discuss AI in Education
-                  </button>
+                {/* Custom Topic Input */}
+                <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Start Your Own Conversation</h3>
+                  <div className="flex space-x-3">
+                    <input
+                      type="text"
+                      value={topicInput}
+                      onChange={(e) => setTopicInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && startConversation(topicInput)}
+                      placeholder="Enter any topic you'd like to discuss with the AIs..."
+                      className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isLoading || selectedAIs.length === 0}
+                    />
+                    <button
+                      onClick={() => startConversation(topicInput)}
+                      disabled={!topicInput.trim() || isLoading || selectedAIs.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      Start Conversation
+                    </button>
+                  </div>
+                </div>
+
+                {/* Suggested Topics */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Or try a suggested topic:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {SUGGESTED_TOPICS.map((topic, index) => (
+                      <button
+                        key={index}
+                        onClick={() => startConversation(topic)}
+                        disabled={selectedAIs.length === 0}
+                        className="bg-white hover:bg-gray-50 disabled:bg-gray-100 border border-gray-200 rounded-lg p-4 text-left transition-colors"
+                      >
+                        <p className="text-gray-700">{topic}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -348,7 +380,7 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Input Area */}
+        {/* Input Area for ongoing conversations */}
         {conversationStarted && (
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
             <div className="max-w-4xl mx-auto">
@@ -358,7 +390,7 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage(input)}
-                  placeholder="Guide the conversation... (Press Enter to send)"
+                  placeholder="Continue the conversation... (Press Enter to send)"
                   className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={isLoading}
                 />
