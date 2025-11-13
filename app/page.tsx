@@ -3,26 +3,6 @@ import Link from 'next/link';
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="font-bold text-xl text-gray-900">Janus Forge</div>
-            <div className="flex space-x-4">
-              <Link href="/login" className="text-gray-600 hover:text-gray-900">
-                Login
-              </Link>
-              <Link 
-                href="/pricing" 
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* Hero Section */}
       <div className="text-center py-20">
         <h1 className="text-5xl font-bold text-gray-900 mb-6">
