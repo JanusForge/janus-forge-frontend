@@ -9,6 +9,7 @@ interface Message {
   content: string;
   ai?: string;
   timestamp: Date;
+  realAI?: boolean;
 }
 
 const FREE_AI_PLATFORMS = [
@@ -68,13 +69,50 @@ export default function ChatPage() {
     );
   };
 
+  const callRealAI = async (topic: string): Promise<Message[]> => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch('/api/debate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ query: topic }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get AI responses');
+    }
+
+    const data = await response.json();
+    
+    // Transform the backend response into our message format
+    return data.responses.map((aiResponse: any) => ({
+      id: `ai-${Date.now()}-${aiResponse.ai}`,
+      role: 'assistant' as const,
+      content: aiResponse.real_ai_used && !aiResponse.response.includes('API Error') 
+        ? aiResponse.response 
+        : `[Simulated] ${getAIResponse(aiResponse.ai, topic)}`,
+      ai: aiResponse.ai,
+      timestamp: new Date(aiResponse.timestamp),
+      realAI: aiResponse.real_ai_used && !aiResponse.response.includes('API Error')
+    }));
+  };
+
   const startConversation = async (topic: string) => {
     if (!topic.trim() || selectedAIs.length === 0) return;
     
     setIsLoading(true);
     setConversationStarted(true);
-    setTopicInput(''); // Clear the topic input
+    setTopicInput('');
     
+    // Add user's topic
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -85,35 +123,41 @@ export default function ChatPage() {
     setMessages([userMessage]);
 
     try {
+      // Try to call real AI backend first
+      const aiResponses = await callRealAI(topic);
+      setMessages(prev => [...prev, ...aiResponses]);
+      
+    } catch (error) {
+      console.error('Real AI call failed, using simulated responses:', error);
+      
+      // Fallback to simulated responses if real API fails
       setTimeout(() => {
-        const aiResponses: Message[] = selectedAIs.map((aiId, index) => {
+        const simulatedResponses: Message[] = selectedAIs.map((aiId, index) => {
           const ai = ALL_AI_PLATFORMS.find(a => a.id === aiId);
           return {
             id: `ai-${Date.now()}-${index}`,
             role: 'assistant',
-            content: getAIResponse(aiId, topic),
+            content: `[Simulated - API Unavailable] ${getAIResponse(aiId, topic)}`,
             ai: aiId,
-            timestamp: new Date()
+            timestamp: new Date(),
+            realAI: false
           };
         });
 
-        setMessages(prev => [...prev, ...aiResponses]);
-        setIsLoading(false);
+        setMessages(prev => [...prev, ...simulatedResponses]);
       }, 2000);
-
-    } catch (error) {
-      console.error('Error starting conversation:', error);
+    } finally {
       setIsLoading(false);
     }
   };
 
   const getAIResponse = (ai: string, topic: string): string => {
     const responses: { [key: string]: string } = {
-      chatgpt: `That's a fascinating topic about "${topic}". From my perspective, this raises important questions about how we approach complex problems collaboratively. What do the others think?`,
-      claude: `I appreciate you bringing up "${topic}". It reminds me that the most meaningful solutions often emerge from diverse perspectives working in harmony.`,
-      gemini: `"${topic}" - what an engaging subject! It highlights how different AI systems can complement each other's strengths.`,
-      grok: `Alright, "${topic}" - now we're talking! This is exactly the kind of complex, real-world problem I love digging into.`,
-      deepseek: `Analyzing "${topic}" from multiple angles reveals several interesting patterns and potential solutions worth exploring.`
+      chatgpt: `I'd approach "${topic}" by considering the historical context and contemporary implications. This seems like a complex issue that requires careful analysis of multiple perspectives.`,
+      claude: `Regarding "${topic}", I think it's important to examine this through both historical and modern lenses. The interplay between historical narratives and present-day understanding is crucial here.`,
+      gemini: `When considering "${topic}", multiple dimensions come to mind - historical accuracy, cultural memory, and how societies reconcile with complex pasts.`,
+      grok: `"${topic}" - now that's a topic with some real depth! Let's unpack the historical narratives and see what they reveal about current perspectives.`,
+      deepseek: `Analyzing "${topic}" requires examining historical interpretations, their evolution over time, and how they shape contemporary understanding and commemorations.`
     };
     return responses[ai] || `I'd like to discuss "${topic}" with the group.`;
   };
@@ -132,29 +176,41 @@ export default function ChatPage() {
     setInput('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      const aiResponses: Message[] = selectedAIs.map((aiId, index) => ({
-        id: `ai-${Date.now()}-${index}`,
-        role: 'assistant',
-        content: getContinuingResponse(aiId, content),
-        ai: aiId,
-        timestamp: new Date()
-      }));
-
+    try {
+      // Try real AI for follow-up messages too
+      const aiResponses = await callRealAI(content);
       setMessages(prev => [...prev, ...aiResponses]);
+    } catch (error) {
+      console.error('Real AI call failed for follow-up:', error);
+      
+      // Fallback to simulated responses
+      setTimeout(() => {
+        const simulatedResponses: Message[] = selectedAIs.map((aiId, index) => ({
+          id: `ai-${Date.now()}-${index}`,
+          role: 'assistant',
+          content: `[Simulated - API Unavailable] ${getContinuingResponse(aiId, content)}`,
+          ai: aiId,
+          timestamp: new Date(),
+          realAI: false
+        }));
+
+        setMessages(prev => [...prev, ...simulatedResponses]);
+        setIsLoading(false);
+      }, 2000);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const getContinuingResponse = (ai: string, userMessage: string): string => {
     const responses: { [key: string]: string } = {
-      chatgpt: `Building on that point, I think ${userMessage} raises some interesting implications.`,
-      claude: `You make a good observation. ${userMessage} This aligns with my thinking about collaborative problem-solving.`,
-      gemini: `I like where you're going with ${userMessage}. It reminds me that our different perspectives can create a more complete picture.`,
-      grok: `Ha! ${userMessage} - now that's a spicy take! Let me add some fuel to this discussion.`,
-      deepseek: `Interesting perspective on ${userMessage}. Let me analyze this from a few different angles.`
+      chatgpt: `Following up on that point about "${userMessage}", I'd consider how this perspective interacts with other viewpoints in the discussion.`,
+      claude: `Building on your observation about "${userMessage}", this seems to connect with several important themes we've been exploring.`,
+      gemini: `Your point about "${userMessage}" raises interesting questions about how different approaches might complement each other in this analysis.`,
+      grok: `Now that's an interesting angle on "${userMessage}"! Let me see how this fits with the broader context we're discussing.`,
+      deepseek: `Your input about "${userMessage}" provides a valuable perspective that enhances our multi-faceted analysis of this topic.`
     };
-    return responses[ai] || `Thanks for sharing that perspective about ${userMessage}.`;
+    return responses[ai] || `Thanks for sharing that perspective about "${userMessage}".`;
   };
 
   const resetConversation = () => {
@@ -336,7 +392,7 @@ export default function ChatPage() {
                       message.role === 'user'
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-900'
-                    }`}
+                    } ${!message.realAI && message.role === 'assistant' ? 'border-2 border-yellow-400' : ''}`}
                   >
                     {message.role === 'assistant' && (
                       <div className="flex items-center space-x-2 mb-2">
@@ -346,8 +402,11 @@ export default function ChatPage() {
                         <span className="font-medium text-sm">
                           {ALL_AI_PLATFORMS.find(f => f.id === message.ai)?.name}
                         </span>
-                        {ALL_AI_PLATFORMS.find(f => f.id === message.ai)?.requiresPaid && (
-                          <span className="text-xs bg-orange-100 text-orange-800 px-1 rounded">Pro</span>
+                        {!message.realAI && (
+                          <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Simulated</span>
+                        )}
+                        {message.realAI && (
+                          <span className="text-xs bg-green-100 text-green-800 px-1 rounded">Live AI</span>
                         )}
                       </div>
                     )}
