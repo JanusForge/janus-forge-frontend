@@ -13,26 +13,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Test endpoint without auth first
-    const testResponse = await fetch(`${API_BASE_URL}/v1/status`);
-    if (!testResponse.ok) {
+    // Get the authorization header from the request
+    const authHeader = request.headers.get('authorization');
+    
+    if (!authHeader) {
       return NextResponse.json(
-        { error: 'Backend not reachable' },
-        { status: 502 }
+        { error: 'Authentication required. Please log in.' },
+        { status: 401 }
       );
     }
 
-    // For now, return mock data until auth is implemented
-    const mockData = {
-      debate_topic: query,
-      responses: [
-        { model: "chatgpt", response: "Mock ChatGPT response for: " + query },
-        { model: "gemini", response: "Mock Gemini response for: " + query }
-      ],
-      note: "Authentication required for real AI responses"
-    };
+    // Call the real backend with authentication
+    const response = await fetch(`${API_BASE_URL}/v1/dialectic`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      body: JSON.stringify({ 
+        query,
+        models: ["chatgpt", "gemini", "claude"] // Use available models
+      }),
+    });
 
-    return NextResponse.json(mockData);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Backend error:', response.status, errorText);
+      return NextResponse.json(
+        { error: `Backend error: ${response.status}` },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error('API route error:', error);
