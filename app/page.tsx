@@ -6,13 +6,13 @@ export default function Home() {
       {/* Hero Section */}
       <div className="text-center py-20">
         <h1 className="text-5xl font-bold text-gray-900 mb-6">
-          AI-Moderated Debates
+          AI-Moderated Conversations
           <br />
           <span className="text-blue-600">Under Human Control</span>
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
           Guide conversations between multiple AI systems. Set the rules, moderate the flow, 
-          and extract insights through structured debate orchestration.
+          and extract insights through structured group discussions with your AI companions.
         </p>
         
         <div className="flex justify-center space-x-4">
@@ -23,10 +23,10 @@ export default function Home() {
             Start Moderating
           </Link>
           <Link
-            href="/debate"
+            href="/chat"
             className="bg-white hover:bg-gray-50 text-gray-900 font-bold py-4 px-8 rounded-lg text-lg border border-gray-300 transition-colors"
           >
-            Try Demo
+            Try Group Chat
           </Link>
         </div>
       </div>
@@ -39,15 +39,15 @@ export default function Home() {
               <span className="text-2xl">🎯</span>
             </div>
             <h3 className="text-xl font-bold mb-2">Human-Led Moderation</h3>
-            <p className="text-gray-600">You control the debate flow, timing, and direction between AI systems.</p>
+            <p className="text-gray-600">You control the conversation flow, timing, and direction between AI systems.</p>
           </div>
           
           <div className="text-center">
             <div className="bg-green-100 rounded-lg p-3 inline-block mb-4">
-              <span className="text-2xl">🤖</span>
+              <span className="text-2xl">🤝</span>
             </div>
-            <h3 className="text-xl font-bold mb-2">Multi-AI Orchestration</h3>
-            <p className="text-gray-600">ChatGPT, Claude, Gemini and more - all debating under your guidance.</p>
+            <h3 className="text-xl font-bold mb-2">Choose Your AI Friends</h3>
+            <p className="text-gray-600">Pick which AIs to include - free access to platforms you already use.</p>
           </div>
           
           <div className="text-center">
@@ -55,7 +55,7 @@ export default function Home() {
               <span className="text-2xl">💬</span>
             </div>
             <h3 className="text-xl font-bold mb-2">Interactive Dialogue</h3>
-            <p className="text-gray-600">Real conversational turns, not just parallel monologues.</p>
+            <p className="text-gray-600">Real conversational turns with multiple AI companions, not dry debates.</p>
           </div>
         </div>
       </div>

@@ -1,60 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import DebateInput from '../../components/DebateInput';
-import DebateResults from '../../components/DebateResults';
 
 export default function DebatePage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
   const router = useRouter();
-
-  const handleSubmit = async (query: string) => {
-    setIsLoading(true);
-    setResult(null);
-
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      const response = await fetch('/api/debate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ query }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit debate');
-      }
-
-      setResult(data);
-    } catch (error: any) {
-      setResult({ error: error.message });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  
+  useEffect(() => {
+    // Redirect to the new conversational chat interface
+    router.replace('/chat');
+  }, [router]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">AI Debate Platform</h1>
-          <p className="mt-2 text-gray-600">Multiple AI models will debate any topic you choose</p>
-        </div>
-
-        <DebateInput onSubmit={handleSubmit} isLoading={isLoading} />
-        <DebateResults result={result} isLoading={isLoading} />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Taking you to the new conversational interface...</p>
       </div>
     </div>
   );

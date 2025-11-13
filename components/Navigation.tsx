@@ -54,12 +54,12 @@ export default function Navigation() {
               Pricing
             </Link>
             <Link 
-              href="/debate" 
+              href="/chat" 
               className={`${
-                pathname === '/debate' ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'
+                pathname === '/chat' ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'
               } transition-colors`}
             >
-              Debates
+              AI Chat
             </Link>
             
             {isLoggedIn ? (
